@@ -1,0 +1,35 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+htmlcov/
+.coverage*
+staticfiles/
+media/
+# Frontend
+node_modules/
+dist/
+.vite/
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+# Test / generated artifacts
+playwright-report/
+test-results/
+*.log
+*.sqlite3
+
+# Celery Beat runtime state
+backend/celerybeat-schedule*
