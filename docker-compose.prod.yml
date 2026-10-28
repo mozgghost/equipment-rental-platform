@@ -1,0 +1,26 @@
+# Deployment template only. Add TLS/ingress, managed secret storage, object storage,
+# private networks, backup policies, resource limits and image digests before production.
+name: equipment-rental-platform-prod
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?Use an immutable, scanned backend image}
+    env_file: [.env.production]
+    environment:
+      DJANGO_DEBUG: "0"
+      DB_HOST: ${DB_HOST:?Use managed PostgreSQL}
+      REDIS_URL: ${REDIS_URL:?Use managed/private Redis if workers enabled}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  worker:
+    image: ${BACKEND_IMAGE:?Use an immutable, scanned backend image}
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--concurrency=2"]
+    env_file: [.env.production]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+# Intentionally no public ports and no database credentials/default passwords.
