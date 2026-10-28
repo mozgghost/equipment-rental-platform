@@ -1,0 +1,159 @@
+openapi: 3.1.0
+info:
+  title: Equipment Rental Platform API
+  version: 0.1.0
+  description: >-
+    Initial API contract for currently implemented authentication, catalogue and booking routes.
+    Runtime schema is served at /api/schema/. Email verification, password reset, provider webhooks,
+    organization write APIs and equipment write APIs are not yet implemented.
+servers:
+  - url: http://localhost:8080
+security: []
+paths:
+  /api/auth/csrf/:
+    get:
+      summary: Establish a session CSRF cookie
+      responses:
+        '200':
+          description: CSRF token value; write requests must also send the csrftoken cookie.
+  /api/auth/register/:
+    post:
+      summary: Register a local account
+      description: Email verification is not implemented; do not use this endpoint for production onboarding.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                display_name: { type: string, maxLength: 160 }
+                password: { type: string, minLength: 12, writeOnly: true }
+      responses:
+        '201': { description: Account created in the current scaffold. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/auth/login/:
+    post:
+      summary: Create a Django session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, writeOnly: true }
+      responses:
+        '200': { description: Session created. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { description: CSRF validation failed. }
+  /api/auth/me/:
+    get:
+      summary: Get the current account and active company memberships
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Current user profile. }
+        '403': { description: Authentication required. }
+  /api/catalog/categories/:
+    get:
+      summary: List active equipment categories
+      responses:
+        '200':
+          description: Category array.
+          content:
+            application/json:
+              schema: { type: array, items: { type: object } }
+  /api/catalog/equipment/:
+    get:
+      summary: Search published equipment
+      parameters:
+        - { in: query, name: search, schema: { type: string } }
+        - { in: query, name: category, schema: { type: string } }
+        - { in: query, name: min_price, schema: { type: number, minimum: 0 } }
+        - { in: query, name: max_price, schema: { type: number, minimum: 0 } }
+        - { in: query, name: available_from, schema: { type: string, format: date-time } }
+        - { in: query, name: available_to, schema: { type: string, format: date-time } }
+        - { in: query, name: ordering, schema: { type: string, enum: [base_rate, -base_rate, name, -name, created_at, -created_at] } }
+      responses:
+        '200': { description: Paginated published equipment. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/catalog/equipment/{slug}/:
+    get:
+      summary: Retrieve a published equipment detail
+      parameters:
+        - { in: path, name: slug, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Public equipment detail. }
+        '404': { description: Listing not found. }
+  /api/bookings/:
+    get:
+      summary: List bookings visible to the authenticated user
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Booking array capped at 100 records; pagination is not implemented yet. }
+        '403': { description: Authentication required. }
+    post:
+      summary: Place an idempotent booking hold
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 128 } }
+        - { in: header, name: X-CSRFToken, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [equipment_id, starts_at, ends_at]
+              properties:
+                equipment_id: { type: integer, minimum: 1 }
+                starts_at: { type: string, format: date-time, description: Must include timezone offset. }
+                ends_at: { type: string, format: date-time, description: Must include timezone offset and be after starts_at. }
+      responses:
+        '201': { description: Reservation hold created; server-side price snapshot returned. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { description: Authentication or CSRF failure. }
+        '409': { description: Availability or idempotency conflict. }
+  /api/bookings/{booking_id}/:
+    parameters:
+      - { in: path, name: booking_id, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      summary: Retrieve a booking visible to the caller
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Booking detail. }
+        '404': { description: Booking not found or not visible. }
+    post:
+      summary: Cancel an eligible booking
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: header, name: X-CSRFToken, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: Booking cancelled; active availability block released. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { description: Caller cannot cancel this booking. }
+        '404': { description: Booking not found or not visible. }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sessionid
+  responses:
+    BadRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
