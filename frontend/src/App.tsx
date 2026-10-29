@@ -8,6 +8,89 @@ import { APP_NAME, BRAND_MARK } from './brand';
 function money(value: string, currency = 'EUR') {
   return new Intl.NumberFormat('en-NL', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value));
 }
+
+const EQUIPMENT_IMAGES: Record<string, string> = {
+  'air-compressor': '/images/equipment/air-compressor.jpg',
+  'boom-lift': '/images/equipment/boom-lift.jpg',
+  bulldozer: '/images/equipment/bulldozer.jpg',
+  'concrete-mixer': '/images/equipment/concrete-mixer.jpg',
+  'concrete-pump': '/images/equipment/concrete-pump.jpg',
+  'concrete-vibrator': '/images/equipment/concrete-vibrator.jpg',
+  'construction-heater': '/images/equipment/construction-heater.jpg',
+  'dump-truck': '/images/equipment/dump-truck.jpg',
+  'excavator-cat-320': '/images/equipment/excavator-cat-320.jpg',
+  excavator: '/images/equipment/excavator-cat-320.jpg',
+  forklift: '/images/equipment/forklift.jpg',
+  generator: '/images/equipment/generator.jpg',
+  'mini-excavator-kubota': '/images/equipment/mini-excavator-kubota.jpg',
+  'mini-excavator': '/images/equipment/mini-excavator-kubota.jpg',
+  'mobile-crane': '/images/equipment/mobile-crane.jpg',
+  'road-roller': '/images/equipment/road-roller.jpg',
+  'scaffolding': '/images/equipment/scaffolding.jpg',
+  'scissor-lift': '/images/equipment/scissor-lift.jpg',
+  'site-cabin': '/images/equipment/site-cabin.jpg',
+  'site-fencing': '/images/equipment/site-fencing.jpg',
+  'skid-steer-loader': '/images/equipment/skid-steer-loader.jpg',
+  telehandler: '/images/equipment/telehandler.jpg',
+  trencher: '/images/equipment/trencher.jpg',
+  'wheel-loader-volvo': '/images/equipment/wheel-loader-volvo.jpg',
+  'wheel-loader': '/images/equipment/wheel-loader-volvo.jpg',
+};
+
+
+function equipmentImage(item: Equipment): string {
+  const categoryText = (item.categories ?? [])
+    .map((category) => `${category.slug ?? ''} ${category.name ?? ''}`)
+    .join(' ');
+
+  const text = `${item.slug ?? ''} ${item.name ?? ''} ${categoryText}`
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  const aliases: Record<string, string> = {
+    excavators: 'excavator',
+    'mini-excavators': 'mini-excavator',
+    'wheel-loaders': 'wheel-loader',
+    'telehandlers': 'telehandler',
+    'scissor-lifts': 'scissor-lift',
+    'boom-lifts': 'boom-lift',
+    forklifts: 'forklift',
+    dumpers: 'dump-truck',
+    rollers: 'road-roller',
+    generators: 'generator',
+    compressors: 'air-compressor',
+    'concrete-mixers': 'concrete-mixer',
+    pumps: 'concrete-pump',
+    cranes: 'mobile-crane',
+    trenchers: 'trencher',
+    'skid-steers': 'skid-steer-loader',
+    dozers: 'bulldozer',
+    'site-cabins': 'site-cabin',
+    fencing: 'site-fencing',
+    heaters: 'construction-heater',
+    scaffolding: 'scaffolding',
+  };
+
+  const keys = Object.keys(EQUIPMENT_IMAGES).sort(
+    (a, b) => b.length - a.length,
+  );
+
+  const key = keys.find((candidate) => text.includes(candidate));
+
+  if (key) return EQUIPMENT_IMAGES[key];
+
+  const categoryKey = Object.keys(aliases).find(
+    (candidate) => text.includes(candidate),
+  );
+
+  if (categoryKey) {
+    return EQUIPMENT_IMAGES[aliases[categoryKey]];
+  }
+
+  return '/images/equipment/excavator-cat-320.jpg';
+}
+
+
 function Header() {
   return <header className="topbar"><Link className="brand" to="/"><span className="brand-mark">{BRAND_MARK}</span><span>{APP_NAME}</span></Link><nav><a href="#how-it-works">How it works</a><a href="#for-suppliers">For suppliers</a><Link to="/dashboard">My rentals</Link></nav><div className="top-actions"><Link className="login-link" to="/login">Log in</Link><Link className="button button-dark button-small" to="/register">Get started <span>↗</span></Link></div></header>;
 }
@@ -45,14 +128,14 @@ function Catalog() {
 }
 function EquipmentCard({ item, index }: { item: Equipment; index: number }) {
   const kind = item.categories[0]?.name ?? 'Equipment';
-  return <article className="equipment-card"><Link to={`/equipment/${item.slug}`} className={`equipment-visual visual-${index % 4}`} aria-label={`View ${item.name}`}><span className="visual-badge">{kind}</span><span className="visual-index">{String(index + 1).padStart(2, '0')}</span><div className="equipment-glyph" aria-hidden="true">{index % 4 === 0 ? '▰' : index % 4 === 1 ? '⬡' : index % 4 === 2 ? '▱' : '◈'}</div><span className="visual-hint">VIEW DETAILS ↗</span></Link><div className="card-content"><div className="card-meta"><span>{item.company_name}</span><span className="availability-tag"><i/> Listed</span></div><h3><Link to={`/equipment/${item.slug}`}>{item.name}</Link></h3><p className="card-location">⌖ {item.location.city}, {item.location.country_code}</p><div className="card-bottom"><div><strong>{money(item.base_rate, item.currency)}</strong><span> / {item.billing_unit}</span>{Number(item.deposit_amount) > 0 && <small>Deposit {money(item.deposit_amount, item.currency)}</small>}</div><Link className="round-arrow" to={`/equipment/${item.slug}`} aria-label={`Details for ${item.name}`}>↗</Link></div></div></article>;
+  return <article className="equipment-card"><Link to={`/equipment/${item.slug}`} className={`equipment-visual visual-${index % 4}`} aria-label={`View ${item.name}`}><span className="visual-badge">{kind}</span><span className="visual-index">{String(index + 1).padStart(2, '0')}</span><img className="equipment-photo" src={equipmentImage(item)} alt={item.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = '/images/equipment/excavator-cat-320.jpg';}} /><span className="visual-hint">VIEW DETAILS ↗</span></Link><div className="card-content"><div className="card-meta"><span>{item.company_name}</span><span className="availability-tag"><i/> Listed</span></div><h3><Link to={`/equipment/${item.slug}`}>{item.name}</Link></h3><p className="card-location">⌖ {item.location.city}, {item.location.country_code}</p><div className="card-bottom"><div><strong>{money(item.base_rate, item.currency)}</strong><span> / {item.billing_unit}</span>{Number(item.deposit_amount) > 0 && <small>Deposit {money(item.deposit_amount, item.currency)}</small>}</div><Link className="round-arrow" to={`/equipment/${item.slug}`} aria-label={`Details for ${item.name}`}>↗</Link></div></div></article>;
 }
 function EquipmentDetail() {
   const { slug = '' } = useParams(); const [item, setItem] = useState<Equipment | null>(null); const [error, setError] = useState(''); const [openBooking, setOpenBooking] = useState(false);
   useEffect(() => { api<Equipment>(`/api/catalog/equipment/${slug}/`).then(setItem).catch(e => setError(e.message)); }, [slug]);
   if (error) return <main className="page-shell"><div className="notice error">{error}</div><Link to="/">← Back to catalogue</Link></main>;
   if (!item) return <main className="page-shell"><p>Loading equipment details…</p></main>;
-  return <main className="page-shell detail-page"><Link className="back-link" to="/">← Back to catalogue</Link><div className="detail-layout"><div className="detail-visual"><span className="visual-badge">{item.categories[0]?.name ?? 'Equipment'}</span><div className="equipment-glyph">◈</div></div><div className="detail-info"><div className="eyebrow dark-eyebrow">SUPPLIER LISTING</div><h1>{item.name}</h1><p className="detail-location">⌖ {item.location.city}, {item.location.country_code} · Listed by {item.company_name}</p><p className="detail-description">{item.description || 'Contact the supplier for equipment specifications, transport options and site requirements.'}</p><div className="detail-price"><div><strong>{money(item.base_rate, item.currency)}</strong><span> / {item.billing_unit}</span></div><small>{Number(item.deposit_amount) ? `Refundable deposit: ${money(item.deposit_amount, item.currency)}` : 'No deposit configured in this listing'}</small></div><div className="detail-facts"><span><b>Minimum duration</b>{item.minimum_rental_hours} hours</span><span><b>Currency</b>{item.currency}</span><span><b>Supplier</b>{item.company_name}</span></div><button className="button button-dark booking-cta" onClick={() => setOpenBooking(true)}>Request a booking <span>↗</span></button><p className="fine-print">Final price and availability are verified by the server. Payment processing is not enabled in this early version.</p></div></div>{openBooking && <BookingDialog item={item} close={() => setOpenBooking(false)}/>}</main>;
+  return <main className="page-shell detail-page"><Link className="back-link" to="/">← Back to catalogue</Link><div className="detail-layout"><div className="detail-visual"><span className="visual-badge">{item.categories[0]?.name ?? 'Equipment'}</span><img className="detail-photo" src={equipmentImage(item)} alt={item.name} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = '/images/equipment/excavator-cat-320.jpg'; }} /></div><div className="detail-info"><div className="eyebrow dark-eyebrow">SUPPLIER LISTING</div><h1>{item.name}</h1><p className="detail-location">⌖ {item.location.city}, {item.location.country_code} · Listed by {item.company_name}</p><p className="detail-description">{item.description || 'Contact the supplier for equipment specifications, transport options and site requirements.'}</p><div className="detail-price"><div><strong>{money(item.base_rate, item.currency)}</strong><span> / {item.billing_unit}</span></div><small>{Number(item.deposit_amount) ? `Refundable deposit: ${money(item.deposit_amount, item.currency)}` : 'No deposit configured in this listing'}</small></div><div className="detail-facts"><span><b>Minimum duration</b>{item.minimum_rental_hours} hours</span><span><b>Currency</b>{item.currency}</span><span><b>Supplier</b>{item.company_name}</span></div><button className="button button-dark booking-cta" onClick={() => setOpenBooking(true)}>Request a booking <span>↗</span></button><p className="fine-print">Final price and availability are verified by the server. Payment processing is not enabled in this early version.</p></div></div>{openBooking && <BookingDialog item={item} close={() => setOpenBooking(false)}/>}</main>;
 }
 function BookingDialog({ item, close }: { item: Equipment; close: () => void }) {
   const [start, setStart] = useState(''); const [end, setEnd] = useState(''); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(''); const [success, setSuccess] = useState(false);
